@@ -16,7 +16,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 AUE4MinecraftCharacter::AUE4MinecraftCharacter()
 {
 	// Set size for collision capsule
-	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
+	GetCapsuleComponent()->InitCapsuleSize(40.f, 96.0f);
 
 	// set our turn rates for input
 	BaseTurnRate = 45.f;
@@ -27,6 +27,8 @@ AUE4MinecraftCharacter::AUE4MinecraftCharacter()
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->MaxWalkSpeed = 250.f;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 100.f;
+	GetCharacterMovement()->MaxStepHeight = 0.f;
+	GetCharacterMovement()->SetWalkableFloorAngle(0.f);
 
 	// Create a CameraComponent	
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
@@ -48,7 +50,7 @@ AUE4MinecraftCharacter::AUE4MinecraftCharacter()
 	FP_Gun->CastShadow = false;
 	FP_Gun->SetupAttachment(RootComponent);
 
-	Reach = 300.f;
+	Reach = 200.f;
 
 	// Note: The ProjectileClass and the skeletal mesh/anim blueprints for Mesh1P, FP_Gun, and VR_Gun 
 	// are set in the derived blueprint asset named MyCharacter to avoid direct content references in C++.
@@ -61,9 +63,9 @@ void AUE4MinecraftCharacter::BeginPlay()
 
  	//Attach gun mesh component to Skeleton, doing it here because the skeleton is not yet created in the constructor
  	FP_Gun->AttachToComponent(Mesh1P, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("GripPoint"));
-	FP_Gun->RelativeLocation = FVector(-10.f, 10.f, 10.f);
-	FP_Gun->RelativeRotation = FRotator(140.f, 80.f, 90.f);
-	FP_Gun->RelativeScale3D = FVector(0.5f, 0.5f, 0.5f);
+	FP_Gun->RelativeLocation = FVector(-5.f, -5.f, 15.f);
+	FP_Gun->RelativeRotation = FRotator(150.f, 90.f, 90.f);
+	FP_Gun->RelativeScale3D = FVector(0.4f, 0.4f, 0.4f);
 }
 
 void AUE4MinecraftCharacter::Tick(float DeltaTime)
@@ -84,13 +86,8 @@ void AUE4MinecraftCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
-	//InputComponent->BindTouch(EInputEvent::IE_Pressed, this, &AUE4MinecraftCharacter::TouchStarted);
-	if (EnableTouchscreenMovement(PlayerInputComponent) == false)
-	{
-		PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AUE4MinecraftCharacter::OnFire);
-	}
-
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AUE4MinecraftCharacter::OnResetVR);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AUE4MinecraftCharacter::OnHit);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AUE4MinecraftCharacter::EndHit);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AUE4MinecraftCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AUE4MinecraftCharacter::MoveRight);
@@ -102,91 +99,6 @@ void AUE4MinecraftCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	PlayerInputComponent->BindAxis("TurnRate", this, &AUE4MinecraftCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AUE4MinecraftCharacter::LookUpAtRate);
-}
-
-void AUE4MinecraftCharacter::OnFire()
-{
-	// try and play the sound if specified
-	if (FireSound != NULL)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
-	}
-
-	// try and play a firing animation if specified
-	if (FireAnimation != NULL)
-	{
-		// Get the animation object for the arms mesh
-		UAnimInstance* AnimInstance = Mesh1P->GetAnimInstance();
-		if (AnimInstance != NULL)
-		{
-			AnimInstance->Montage_Play(FireAnimation, 1.f);
-		}
-	}
-}
-
-void AUE4MinecraftCharacter::OnResetVR()
-{
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
-}
-
-void AUE4MinecraftCharacter::BeginTouch(const ETouchIndex::Type FingerIndex, const FVector Location)
-{
-	if (TouchItem.bIsPressed == true)
-	{
-		return;
-	}
-	TouchItem.bIsPressed = true;
-	TouchItem.FingerIndex = FingerIndex;
-	TouchItem.Location = Location;
-	TouchItem.bMoved = false;
-}
-
-void AUE4MinecraftCharacter::EndTouch(const ETouchIndex::Type FingerIndex, const FVector Location)
-{
-	if (TouchItem.bIsPressed == false)
-	{
-		return;
-	}
-	if ((FingerIndex == TouchItem.FingerIndex) && (TouchItem.bMoved == false))
-	{
-		OnFire();
-	}
-	TouchItem.bIsPressed = false;
-}
-
-void AUE4MinecraftCharacter::TouchUpdate(const ETouchIndex::Type FingerIndex, const FVector Location)
-{
-	if ((TouchItem.bIsPressed == true) && (TouchItem.FingerIndex == FingerIndex))
-	{
-		if (TouchItem.bIsPressed)
-		{
-			if (GetWorld() != nullptr)
-			{
-				UGameViewportClient* ViewportClient = GetWorld()->GetGameViewport();
-				if (ViewportClient != nullptr)
-				{
-					FVector MoveDelta = Location - TouchItem.Location;
-					FVector2D ScreenSize;
-					ViewportClient->GetViewportSize(ScreenSize);
-					FVector2D ScaledDelta = FVector2D(MoveDelta.X, MoveDelta.Y) / ScreenSize;
-					if (FMath::Abs(ScaledDelta.X) >= 4.0 / ScreenSize.X)
-					{
-						TouchItem.bMoved = true;
-						float Value = ScaledDelta.X * BaseTurnRate;
-						AddControllerYawInput(Value);
-					}
-					if (FMath::Abs(ScaledDelta.Y) >= 4.0 / ScreenSize.Y)
-					{
-						TouchItem.bMoved = true;
-						float Value = ScaledDelta.Y * BaseTurnRate;
-						AddControllerPitchInput(Value);
-					}
-					TouchItem.Location = Location;
-				}
-				TouchItem.Location = Location;
-			}
-		}
-	}
 }
 
 void AUE4MinecraftCharacter::MoveForward(float Value)
@@ -219,17 +131,51 @@ void AUE4MinecraftCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
-bool AUE4MinecraftCharacter::EnableTouchscreenMovement(class UInputComponent* PlayerInputComponent)
+void AUE4MinecraftCharacter::OnHit()
 {
-	bool bResult = false;
-	if (FPlatformMisc::GetUseVirtualJoysticks() || GetDefault<UInputSettings>()->bUseMouseForTouch)
+	PlayHitAnim();
+
+	if (CurrentBlock != nullptr)
 	{
-		bResult = true;
-		PlayerInputComponent->BindTouch(EInputEvent::IE_Pressed, this, &AUE4MinecraftCharacter::BeginTouch);
-		PlayerInputComponent->BindTouch(EInputEvent::IE_Released, this, &AUE4MinecraftCharacter::EndTouch);
-		PlayerInputComponent->BindTouch(EInputEvent::IE_Repeat, this, &AUE4MinecraftCharacter::TouchUpdate);
+		bIsBreaking = true;
+
+		float TimeBetweenBreaks = ((CurrentBlock->Resistance) / 100.f) / 2.f;
+		GetWorld()->GetTimerManager().SetTimer(BlockBreakingHandle, this, &AUE4MinecraftCharacter::BreakBlock, TimeBetweenBreaks, true);
+		GetWorld()->GetTimerManager().SetTimer(HitAnimHandle, this, &AUE4MinecraftCharacter::PlayHitAnim, 0.4f, true);
 	}
-	return bResult;
+}
+
+void AUE4MinecraftCharacter::EndHit()
+{
+	GetWorld()->GetTimerManager().ClearTimer(BlockBreakingHandle);
+	GetWorld()->GetTimerManager().ClearTimer(HitAnimHandle);
+
+	bIsBreaking = false;
+
+	if (CurrentBlock != nullptr)
+	{
+		CurrentBlock->ResetBlock();
+	}
+}
+
+void AUE4MinecraftCharacter::PlayHitAnim()
+{
+	// try and play the sound if specified
+	if (FireSound != NULL)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
+	}
+
+	// try and play a firing animation if specified
+	if (FireAnimation != NULL)
+	{
+		// Get the animation object for the arms mesh
+		UAnimInstance* AnimInstance = Mesh1P->GetAnimInstance();
+		if (AnimInstance != NULL)
+		{
+			AnimInstance->Montage_Play(FireAnimation, 1.f);
+		}
+	}
 }
 
 void AUE4MinecraftCharacter::CheckForBlock()
@@ -254,8 +200,14 @@ void AUE4MinecraftCharacter::CheckForBlock()
 	else
 	{
 		CurrentBlock = PotentialBlock;
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, *CurrentBlock->GetName());
+		//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, *CurrentBlock->GetName());
 	}
+}
 
-
+void AUE4MinecraftCharacter::BreakBlock()
+{
+	if (bIsBreaking && CurrentBlock != nullptr && !CurrentBlock->IsPendingKill())
+	{
+		CurrentBlock->Break();
+	}
 }

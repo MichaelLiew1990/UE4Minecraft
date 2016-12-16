@@ -20,4 +20,17 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	UStaticMeshComponent* SM_Block;
 	
+	uint8 MinimumMaterial;
+
+	UPROPERTY(EditDefaultsOnly)
+	float Resistance;
+
+	UPROPERTY(BlueprintReadWrite)
+	float BreakingStage;
+
+	void Break();
+
+	void ResetBlock();
+
+	void OnBroken(bool HasRequiredPickaxe);
 };
