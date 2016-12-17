@@ -46,6 +46,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	class UAnimMontage* FireAnimation;
 
+	UFUNCTION(BlueprintPure, Category = HUD)
+	int GetCurrentInventorySlot();
+
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	bool AddItemToInventory(AWieldable* Item);
+
+	UFUNCTION(BlueprintPure, Category = Inventory)
+	UTexture2D* GetThumbnailAtInventorySlot(uint8 Slot);
+
 	ETool ToolType;
 	EMaterial MaterialType;
 
@@ -76,6 +85,13 @@ protected:
 
 
 private:
+	const int NUM_OF_INVENTORY_SLOTS = 8;
+
+	int CurrentInventorySlot;
+
+	void MoveUpInventorySlot();
+	void MoveDownInventorySlot();
+
 	bool bIsBreaking;
 
 	void OnHit();
@@ -93,6 +109,10 @@ private:
 
 	FTimerHandle BlockBreakingHandle;
 	FTimerHandle HitAnimHandle;
+
+	UPROPERTY(EditAnywhere)
+	TArray<AWieldable*> Inventory;
+
 public:
 	/** Returns Mesh1P subobject **/
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }

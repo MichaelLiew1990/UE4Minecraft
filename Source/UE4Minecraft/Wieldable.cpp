@@ -40,10 +40,23 @@ void AWieldable::Tick( float DeltaTime )
 
 void AWieldable::OnRadiusEnter(class UPrimitiveComponent* OverlappedComponent, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	AUE4MinecraftCharacter* Character = Cast<AUE4MinecraftCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
-	Character->FP_Gun->SetStaticMesh(WieldableMesh->StaticMesh);
-	Character->ToolType = ToolType;
-	Character->MaterialType = MaterialType;
-	Destroy();
+	if (bIsActive)
+	{
+		AUE4MinecraftCharacter* Character = Cast<AUE4MinecraftCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+		Character->FP_Gun->SetStaticMesh(WieldableMesh->StaticMesh);
+		Character->AddItemToInventory(this);
+
+		OnPickedUp();
+	}
 }
 
+void AWieldable::OnPickedUp()
+{
+	WieldableMesh->SetVisibility(false);
+	bIsActive = false;
+}
+
+void AWieldable::OnUsed()
+{
+	Destroy();
+}

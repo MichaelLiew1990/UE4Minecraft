@@ -51,6 +51,15 @@ public:
 
 	UShapeComponent* PickupTrigger;
 
+	UPROPERTY(EditDefaultsOnly)
+	UTexture2D* PickupThumbnail;
+
+	bool bIsActive;
+
 	UFUNCTION()
 	void OnRadiusEnter(class UPrimitiveComponent* OverlappedComponent, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	void OnPickedUp();
+
+	void OnUsed();
 };

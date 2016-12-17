@@ -86,6 +86,9 @@ void AUE4MinecraftCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
+	PlayerInputComponent->BindAction("InventoryUp", IE_Pressed, this, &AUE4MinecraftCharacter::MoveUpInventorySlot);
+	PlayerInputComponent->BindAction("InventoryDown", IE_Pressed, this, &AUE4MinecraftCharacter::MoveDownInventorySlot);
+
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AUE4MinecraftCharacter::OnHit);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AUE4MinecraftCharacter::EndHit);
 
@@ -99,6 +102,34 @@ void AUE4MinecraftCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	PlayerInputComponent->BindAxis("TurnRate", this, &AUE4MinecraftCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AUE4MinecraftCharacter::LookUpAtRate);
+}
+
+int AUE4MinecraftCharacter::GetCurrentInventorySlot()
+{
+	return CurrentInventorySlot;
+}
+
+bool AUE4MinecraftCharacter::AddItemToInventory(AWieldable * Item)
+{
+	if (Item != NULL)
+	{
+		const int32 AvailableSlot = Inventory.Find(nullptr);
+		if (AvailableSlot != INDEX_NONE)
+		{
+			Inventory[AvailableSlot] = Item;
+			return true;
+		}
+	}
+	return false;
+}
+
+UTexture2D * AUE4MinecraftCharacter::GetThumbnailAtInventorySlot(uint8 Slot)
+{
+	if (Inventory[Slot] != NULL)
+	{
+		return Inventory[Slot]->PickupThumbnail;
+	}
+	return nullptr;
 }
 
 void AUE4MinecraftCharacter::MoveForward(float Value)
@@ -129,6 +160,21 @@ void AUE4MinecraftCharacter::LookUpAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AUE4MinecraftCharacter::MoveUpInventorySlot()
+{
+	CurrentInventorySlot = FMath::Abs((CurrentInventorySlot + 1) % NUM_OF_INVENTORY_SLOTS);
+}
+
+void AUE4MinecraftCharacter::MoveDownInventorySlot()
+{
+	if (CurrentInventorySlot == 0)
+	{
+		CurrentInventorySlot = NUM_OF_INVENTORY_SLOTS - 1;
+		return;
+	}
+	CurrentInventorySlot = FMath::Abs((CurrentInventorySlot - 1) % NUM_OF_INVENTORY_SLOTS);
 }
 
 void AUE4MinecraftCharacter::OnHit()
