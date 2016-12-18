@@ -51,6 +51,8 @@ AUE4MinecraftCharacter::AUE4MinecraftCharacter()
 	FP_Gun->SetupAttachment(RootComponent);
 
 	Reach = 200.f;
+	
+	Inventory.SetNum(NUM_OF_INVENTORY_SLOTS);
 
 	// Note: The ProjectileClass and the skeletal mesh/anim blueprints for Mesh1P, FP_Gun, and VR_Gun 
 	// are set in the derived blueprint asset named MyCharacter to avoid direct content references in C++.
@@ -123,7 +125,7 @@ bool AUE4MinecraftCharacter::AddItemToInventory(AWieldable * Item)
 	return false;
 }
 
-UTexture2D * AUE4MinecraftCharacter::GetThumbnailAtInventorySlot(uint8 Slot)
+UTexture2D * AUE4MinecraftCharacter::GetThumbnailAtInventorySlot(int Slot)
 {
 	if (Inventory[Slot] != NULL)
 	{

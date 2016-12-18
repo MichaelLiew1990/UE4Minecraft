@@ -21,6 +21,8 @@ AWieldable::AWieldable()
 
 	MaterialType = EMaterial::None;
 	ToolType = ETool::Unarmed;
+	
+	bIsActive = true;
 }
 
 // void AWieldable::BeginPlay()

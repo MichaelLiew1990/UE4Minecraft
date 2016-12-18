@@ -53,7 +53,7 @@ public:
 	bool AddItemToInventory(AWieldable* Item);
 
 	UFUNCTION(BlueprintPure, Category = Inventory)
-	UTexture2D* GetThumbnailAtInventorySlot(uint8 Slot);
+	UTexture2D* GetThumbnailAtInventorySlot(int Slot);
 
 	ETool ToolType;
 	EMaterial MaterialType;
