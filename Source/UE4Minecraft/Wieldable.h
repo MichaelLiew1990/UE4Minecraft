@@ -12,7 +12,11 @@ enum class ETool : uint8
 	Pickaxe,
 	Axe,
 	Shovel,
-	Sword
+	Sword,
+	CreateGrass,
+	CreateGlass,
+	CreateGravel,
+	CreateSoil
 };
 
 UENUM(BlueprintType)
@@ -47,10 +51,14 @@ public:
 	UPROPERTY(EditAnywhere)
 	UStaticMeshComponent* WieldableMesh;
 
+	UPROPERTY(EditAnywhere)
 	UShapeComponent* PickupTrigger;
 
 	UPROPERTY(EditDefaultsOnly)
 	UTexture2D* PickupThumbnail;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block")
+	TSubclassOf<class ABlock> BlockClass;
 
 	bool bIsActive;
 

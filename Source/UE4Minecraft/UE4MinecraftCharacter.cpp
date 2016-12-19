@@ -50,7 +50,7 @@ AUE4MinecraftCharacter::AUE4MinecraftCharacter()
 	FP_Gun->CastShadow = false;
 	FP_Gun->SetupAttachment(RootComponent);
 
-	Reach = 200.f;
+	Reach = 300.f;
 
 	Inventory.SetNum(NUM_OF_INVENTORY_SLOTS);
 
@@ -186,7 +186,7 @@ void AUE4MinecraftCharacter::Throw()
 
 	FHitResult LinetraceHit;
 	FVector StartTrace = FirstPersonCameraComponent->GetComponentLocation();
-	FVector EndTrace = StartTrace + (FirstPersonCameraComponent->GetForwardVector() * Reach * 2.f);
+	FVector EndTrace = StartTrace + (FirstPersonCameraComponent->GetForwardVector() * Reach);
 	FCollisionQueryParams CQP;
 	CQP.AddIgnoredActor(this);
 	CQP.AddIgnoredActor(ItemToThrow);
@@ -199,30 +199,29 @@ void AUE4MinecraftCharacter::Throw()
 
 		//Test
 
-		ABlock* OtherBlock = Cast<ABlock>(OtherActor);
-		if (OtherBlock != NULL)
-		{
-			GetWorld()->SpawnActor<ABlock>(GrassBlock, OtherActor->GetActorLocation() + (LinetraceHit.ImpactNormal * 100.f), FRotator(0.f, 0.f, 0.f), FActorSpawnParameters());
-		}
+// 		ABlock* OtherBlock = Cast<ABlock>(OtherActor);
+// 		if (OtherBlock != NULL)
+// 		{
+// 			GetWorld()->SpawnActor<ABlock>(GrassBlock, OtherActor->GetActorLocation() + (LinetraceHit.ImpactNormal * 100.f), FRotator(0.f, 0.f, 0.f), FActorSpawnParameters());
+// 		}
 
-		// 			FVector DropLocation = EndTrace;
-		// 			AWieldable* ItemToPickup = Cast<AWieldable>(OtherActor);
-		// 			//扔在其它物品上
-		// 			if (ItemToPickup != NULL && ItemToPickup->bIsActive)
-		// 			{
-		// 				GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Green, TEXT("物品上"));
-		// 				DropLocation = ItemToPickup->GetActorLocation();
-		// 				Inventory[CurrentInventorySlot] = ItemToPickup;
-		// 				ItemToPickup->Hide(true);
-		// 			}
-		// 			else//扔在空地上
-		// 			{
-		// 				GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Green, TEXT("地上"));
-		// 				DropLocation = LinetraceHit.ImpactPoint + (LinetraceHit.ImpactNormal*20.f);
-		// 				Inventory[CurrentInventorySlot] = NULL;
-		// 			}
-		// 			ItemToThrow->SetActorLocationAndRotation(DropLocation, FRotator::ZeroRotator);
-		// 			ItemToThrow->Hide(false);
+		FVector DropLocation = EndTrace;
+		AWieldable* ItemToPickup = Cast<AWieldable>(OtherActor);
+		//扔在其它物品上
+		if (ItemToPickup != NULL && ItemToPickup->bIsActive)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Green, TEXT("物品上"));
+			DropLocation = ItemToPickup->GetActorLocation();
+			Inventory[CurrentInventorySlot] = ItemToPickup;
+			ItemToPickup->Hide(true);
+		} else//扔在空地上
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Green, TEXT("地上"));
+			DropLocation = LinetraceHit.ImpactPoint + (LinetraceHit.ImpactNormal*20.f);
+			Inventory[CurrentInventorySlot] = NULL;
+		}
+		ItemToThrow->SetActorLocationAndRotation(DropLocation, FRotator::ZeroRotator);
+		ItemToThrow->Hide(false);
 	}
 
 	UpdateWieldableItem();
@@ -303,19 +302,47 @@ void AUE4MinecraftCharacter::CheckForBlock()
 	FCollisionQueryParams CQP;
 	CQP.AddIgnoredActor(this);
 
-	GetWorld()->LineTraceSingleByChannel(LinetraceHit, StartTrace, EndTrace, ECollisionChannel::ECC_WorldDynamic, CQP);
+	GetWorld()->LineTraceSingleByChannel(LinetraceHit, StartTrace, EndTrace, ECollisionChannel::ECC_Visibility, CQP);
 
 	ABlock* PotentialBlock = Cast<ABlock>(LinetraceHit.GetActor());
+	AWieldable* PotentialWield = Cast<AWieldable>(LinetraceHit.GetActor());
 
+	//还原之前高亮
+	if (CurrentBlock != nullptr)
+	{
+		CurrentBlock->SM_Block->SetRenderCustomDepth(false);
+	}
+	if (CurrentWield != nullptr)
+	{
+		CurrentWield->WieldableMesh->SetRenderCustomDepth(false);
+	}
+
+	//设置当前
 	if (PotentialBlock == NULL)
 	{
 		CurrentBlock = nullptr;
-		return;
 	}
 	else
 	{
 		CurrentBlock = PotentialBlock;
-		//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, *CurrentBlock->GetName());
+	}
+	if (PotentialWield == NULL)
+	{
+		CurrentWield = nullptr;
+	}
+	else
+	{
+		CurrentWield = PotentialWield;
+	}
+
+	//启动当前高亮
+	if (CurrentBlock != nullptr)
+	{
+		CurrentBlock->SM_Block->SetRenderCustomDepth(true);
+	}
+	if (CurrentWield != nullptr)
+	{
+		CurrentWield->WieldableMesh->SetRenderCustomDepth(true);
 	}
 }
 

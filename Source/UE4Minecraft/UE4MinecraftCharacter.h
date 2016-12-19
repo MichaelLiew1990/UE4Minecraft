@@ -33,15 +33,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = Mesh)
 	class UStaticMesh* ArmMesh;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block")
-	TSubclassOf<class ABlock> GrassBlock;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block")
-	TSubclassOf<class ABlock> GlassBlock;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block")
-	TSubclassOf<class ABlock> GravelBlock;
-
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseTurnRate;
@@ -122,6 +113,7 @@ private:
 	void BreakBlock();
 
 	ABlock* CurrentBlock;
+	AWieldable* CurrentWield;
 
 	float Reach;
 
