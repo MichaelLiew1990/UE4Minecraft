@@ -30,6 +30,18 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
 	class UStaticMeshComponent* FP_Gun;
 
+	UPROPERTY(EditAnywhere, Category = Mesh)
+	class UStaticMesh* ArmMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block")
+	TSubclassOf<class ABlock> GrassBlock;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block")
+	TSubclassOf<class ABlock> GlassBlock;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block")
+	TSubclassOf<class ABlock> GravelBlock;
+
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseTurnRate;
@@ -88,6 +100,12 @@ private:
 	const int NUM_OF_INVENTORY_SLOTS = 8;
 
 	int CurrentInventorySlot;
+
+	void UpdateWieldableItem();
+
+	AWieldable* GetCurrentWieldedItem();
+
+	void Throw();
 
 	void MoveUpInventorySlot();
 	void MoveDownInventorySlot();

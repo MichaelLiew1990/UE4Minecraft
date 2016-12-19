@@ -51,7 +51,7 @@ AUE4MinecraftCharacter::AUE4MinecraftCharacter()
 	FP_Gun->SetupAttachment(RootComponent);
 
 	Reach = 200.f;
-	
+
 	Inventory.SetNum(NUM_OF_INVENTORY_SLOTS);
 
 	// Note: The ProjectileClass and the skeletal mesh/anim blueprints for Mesh1P, FP_Gun, and VR_Gun 
@@ -63,8 +63,8 @@ void AUE4MinecraftCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
- 	//Attach gun mesh component to Skeleton, doing it here because the skeleton is not yet created in the constructor
- 	FP_Gun->AttachToComponent(Mesh1P, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("GripPoint"));
+	//Attach gun mesh component to Skeleton, doing it here because the skeleton is not yet created in the constructor
+	FP_Gun->AttachToComponent(Mesh1P, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("GripPoint"));
 	FP_Gun->RelativeLocation = FVector(-5.f, -5.f, 15.f);
 	FP_Gun->RelativeRotation = FRotator(150.f, 90.f, 90.f);
 	FP_Gun->RelativeScale3D = FVector(0.4f, 0.4f, 0.4f);
@@ -90,6 +90,8 @@ void AUE4MinecraftCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 
 	PlayerInputComponent->BindAction("InventoryUp", IE_Pressed, this, &AUE4MinecraftCharacter::MoveUpInventorySlot);
 	PlayerInputComponent->BindAction("InventoryDown", IE_Pressed, this, &AUE4MinecraftCharacter::MoveDownInventorySlot);
+
+	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &AUE4MinecraftCharacter::Throw);
 
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AUE4MinecraftCharacter::OnHit);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AUE4MinecraftCharacter::EndHit);
@@ -119,6 +121,8 @@ bool AUE4MinecraftCharacter::AddItemToInventory(AWieldable * Item)
 		if (AvailableSlot != INDEX_NONE)
 		{
 			Inventory[AvailableSlot] = Item;
+			CurrentInventorySlot = AvailableSlot;
+			UpdateWieldableItem();
 			return true;
 		}
 	}
@@ -164,9 +168,70 @@ void AUE4MinecraftCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
+void AUE4MinecraftCharacter::UpdateWieldableItem()
+{
+	Inventory[CurrentInventorySlot] != NULL ?
+		FP_Gun->SetStaticMesh(Inventory[CurrentInventorySlot]->WieldableMesh->StaticMesh) : FP_Gun->SetStaticMesh(ArmMesh);
+}
+
+AWieldable* AUE4MinecraftCharacter::GetCurrentWieldedItem()
+{
+	return Inventory[CurrentInventorySlot] != NULL ? Inventory[CurrentInventorySlot] : nullptr;
+}
+
+void AUE4MinecraftCharacter::Throw()
+{
+	AWieldable* ItemToThrow = GetCurrentWieldedItem();
+	if (ItemToThrow == NULL) return;
+
+	FHitResult LinetraceHit;
+	FVector StartTrace = FirstPersonCameraComponent->GetComponentLocation();
+	FVector EndTrace = StartTrace + (FirstPersonCameraComponent->GetForwardVector() * Reach * 2.f);
+	FCollisionQueryParams CQP;
+	CQP.AddIgnoredActor(this);
+	CQP.AddIgnoredActor(ItemToThrow);
+
+	GetWorld()->LineTraceSingleByChannel(LinetraceHit, StartTrace, EndTrace, ECollisionChannel::ECC_Visibility, CQP);
+	AActor* OtherActor = LinetraceHit.GetActor();
+	if (OtherActor != NULL)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, TEXT("Other=" + OtherActor->GetName()));
+
+		//Test
+
+		ABlock* OtherBlock = Cast<ABlock>(OtherActor);
+		if (OtherBlock != NULL)
+		{
+			GetWorld()->SpawnActor<ABlock>(GrassBlock, OtherActor->GetActorLocation() + (LinetraceHit.ImpactNormal * 100.f), FRotator(0.f, 0.f, 0.f), FActorSpawnParameters());
+		}
+
+		// 			FVector DropLocation = EndTrace;
+		// 			AWieldable* ItemToPickup = Cast<AWieldable>(OtherActor);
+		// 			//扔在其它物品上
+		// 			if (ItemToPickup != NULL && ItemToPickup->bIsActive)
+		// 			{
+		// 				GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Green, TEXT("物品上"));
+		// 				DropLocation = ItemToPickup->GetActorLocation();
+		// 				Inventory[CurrentInventorySlot] = ItemToPickup;
+		// 				ItemToPickup->Hide(true);
+		// 			}
+		// 			else//扔在空地上
+		// 			{
+		// 				GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Green, TEXT("地上"));
+		// 				DropLocation = LinetraceHit.ImpactPoint + (LinetraceHit.ImpactNormal*20.f);
+		// 				Inventory[CurrentInventorySlot] = NULL;
+		// 			}
+		// 			ItemToThrow->SetActorLocationAndRotation(DropLocation, FRotator::ZeroRotator);
+		// 			ItemToThrow->Hide(false);
+	}
+
+	UpdateWieldableItem();
+}
+
 void AUE4MinecraftCharacter::MoveUpInventorySlot()
 {
 	CurrentInventorySlot = FMath::Abs((CurrentInventorySlot + 1) % NUM_OF_INVENTORY_SLOTS);
+	UpdateWieldableItem();
 }
 
 void AUE4MinecraftCharacter::MoveDownInventorySlot()
@@ -174,9 +239,11 @@ void AUE4MinecraftCharacter::MoveDownInventorySlot()
 	if (CurrentInventorySlot == 0)
 	{
 		CurrentInventorySlot = NUM_OF_INVENTORY_SLOTS - 1;
+		UpdateWieldableItem();
 		return;
 	}
 	CurrentInventorySlot = FMath::Abs((CurrentInventorySlot - 1) % NUM_OF_INVENTORY_SLOTS);
+	UpdateWieldableItem();
 }
 
 void AUE4MinecraftCharacter::OnHit()
