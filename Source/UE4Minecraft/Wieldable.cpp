@@ -2,7 +2,6 @@
 
 #include "UE4Minecraft.h"
 #include "UE4MinecraftCharacter.h"
-#include "Wieldable.h"
 
 
 // Sets default values

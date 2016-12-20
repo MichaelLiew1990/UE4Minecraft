@@ -3,7 +3,6 @@
 #include "UE4Minecraft.h"
 #include "UE4MinecraftCharacter.h"
 #include "Animation/AnimInstance.h"
-#include "UE4MinecraftGameMode.h"
 #include "GameFramework/InputSettings.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
@@ -151,13 +150,13 @@ void AUE4MinecraftCharacter::MoveRight(float Value)
 
 void AUE4MinecraftCharacter::MouseTurn(float v)
 {
-	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
+	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	AddControllerYawInput(v);
 }
 
 void AUE4MinecraftCharacter::MouseLookUp(float v)
 {
-	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
+	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	AddControllerPitchInput(v);
 }
 
@@ -182,7 +181,7 @@ AWieldable* AUE4MinecraftCharacter::GetCurrentWieldedItem()
 
 void AUE4MinecraftCharacter::Throw()
 {
-	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
+	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	AWieldable* ItemToThrow = GetCurrentWieldedItem();
 	if (ItemToThrow == NULL) return;
 
@@ -238,7 +237,7 @@ void AUE4MinecraftCharacter::MoveDownInventorySlot()
 
 void AUE4MinecraftCharacter::OnHit()
 {
-	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
+	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	PlayHitAnim();
 
 	if (GetCurrentWieldedItem() && (int8)(GetCurrentWieldedItem()->ToolType) >= (int8)(ETool::CreateGrass))
@@ -275,7 +274,7 @@ void AUE4MinecraftCharacter::OnHit()
 
 void AUE4MinecraftCharacter::EndHit()
 {
-	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
+	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	if (GetCurrentWieldedItem() && (int8)(GetCurrentWieldedItem()->ToolType) >= (int8)(ETool::CreateGrass))
 	{
 		//
