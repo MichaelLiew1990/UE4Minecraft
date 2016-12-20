@@ -45,7 +45,7 @@ void AWieldable::OnRadiusEnter(class UPrimitiveComponent* OverlappedComponent, c
 		return;
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Yellow, TEXT("´¥Åö"));
+	//GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Yellow, TEXT("´¥Åö"));
 
 	AUE4MinecraftCharacter* Character = Cast<AUE4MinecraftCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
 	Character->FP_Gun->SetStaticMesh(WieldableMesh->StaticMesh);

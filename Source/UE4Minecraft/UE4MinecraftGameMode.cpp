@@ -15,7 +15,7 @@ AUE4MinecraftGameMode::AUE4MinecraftGameMode()
 	// use our custom HUD class
 	HUDClass = AUE4MinecraftHUD::StaticClass();
 
-	HUDState = EHUDState::HS_InGame;
+	HUDState = EHUDState::HS_ToolBar;
 }
 
 void AUE4MinecraftGameMode::BeginPlay()
@@ -35,21 +35,20 @@ void AUE4MinecraftGameMode::ApplyHUDChanges()
 
 	switch (HUDState)
 	{
-	case EHUDState::HS_InGame:
+	case EHUDState::HS_ToolBar:
 	{
-		ApplyHUD(InGameHUDClass, false, false);
+		ApplyHUD(ToolBarHUDClass, false, false);
+		break;
 	}
-	case EHUDState::HS_Inventory:
+	case EHUDState::HS_StoreHouse:
 	{
-		ApplyHUD(InventoryHUDClass, true, true);
-	}
-	case EHUDState::HS_CraftMenu:
-	{
-		ApplyHUD(CraftMenuHUDClass, true, true);
+		ApplyHUD(StoreHouseHUDClass, true, true);
+		break;
 	}
 	default:
 	{
-		ApplyHUD(InGameHUDClass, false, false);
+		ApplyHUD(ToolBarHUDClass, false, false);
+		break;
 	}
 	}
 }

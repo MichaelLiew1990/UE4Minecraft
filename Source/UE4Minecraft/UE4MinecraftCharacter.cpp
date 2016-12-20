@@ -2,11 +2,9 @@
 
 #include "UE4Minecraft.h"
 #include "UE4MinecraftCharacter.h"
-#include "UE4MinecraftProjectile.h"
 #include "Animation/AnimInstance.h"
+#include "UE4MinecraftGameMode.h"
 #include "GameFramework/InputSettings.h"
-#include "Kismet/HeadMountedDisplayFunctionLibrary.h"
-#include "MotionControllerComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -99,13 +97,8 @@ void AUE4MinecraftCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	PlayerInputComponent->BindAxis("MoveForward", this, &AUE4MinecraftCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AUE4MinecraftCharacter::MoveRight);
 
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
-	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
-	PlayerInputComponent->BindAxis("TurnRate", this, &AUE4MinecraftCharacter::TurnAtRate);
-	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
-	PlayerInputComponent->BindAxis("LookUpRate", this, &AUE4MinecraftCharacter::LookUpAtRate);
+	PlayerInputComponent->BindAxis("Turn", this, &AUE4MinecraftCharacter::MouseTurn);
+	PlayerInputComponent->BindAxis("LookUp", this, &AUE4MinecraftCharacter::MouseLookUp);
 }
 
 int AUE4MinecraftCharacter::GetCurrentInventorySlot()
@@ -156,22 +149,30 @@ void AUE4MinecraftCharacter::MoveRight(float Value)
 	}
 }
 
-void AUE4MinecraftCharacter::TurnAtRate(float Rate)
+void AUE4MinecraftCharacter::MouseTurn(float v)
 {
-	// calculate delta for this frame from the rate information
-	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
+	AddControllerYawInput(v);
 }
 
-void AUE4MinecraftCharacter::LookUpAtRate(float Rate)
+void AUE4MinecraftCharacter::MouseLookUp(float v)
 {
-	// calculate delta for this frame from the rate information
-	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
+	AddControllerPitchInput(v);
 }
 
 void AUE4MinecraftCharacter::UpdateWieldableItem()
 {
 	Inventory[CurrentInventorySlot] != NULL ?
 		FP_Gun->SetStaticMesh(Inventory[CurrentInventorySlot]->WieldableMesh->StaticMesh) : FP_Gun->SetStaticMesh(ArmMesh);
+	if (Inventory[CurrentInventorySlot] && (int8)(Inventory[CurrentInventorySlot]->ToolType) >= (int8)(ETool::CreateGrass))
+	{
+		FP_Gun->RelativeScale3D = FVector(0.1f, 0.1f, 0.1f);
+	}
+	else
+	{
+		FP_Gun->RelativeScale3D = FVector(0.4f, 0.4f, 0.4f);
+	}
 }
 
 AWieldable* AUE4MinecraftCharacter::GetCurrentWieldedItem()
@@ -181,6 +182,7 @@ AWieldable* AUE4MinecraftCharacter::GetCurrentWieldedItem()
 
 void AUE4MinecraftCharacter::Throw()
 {
+	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	AWieldable* ItemToThrow = GetCurrentWieldedItem();
 	if (ItemToThrow == NULL) return;
 
@@ -195,28 +197,17 @@ void AUE4MinecraftCharacter::Throw()
 	AActor* OtherActor = LinetraceHit.GetActor();
 	if (OtherActor != NULL)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, TEXT("Other=" + OtherActor->GetName()));
-
-		//Test
-
-// 		ABlock* OtherBlock = Cast<ABlock>(OtherActor);
-// 		if (OtherBlock != NULL)
-// 		{
-// 			GetWorld()->SpawnActor<ABlock>(GrassBlock, OtherActor->GetActorLocation() + (LinetraceHit.ImpactNormal * 100.f), FRotator(0.f, 0.f, 0.f), FActorSpawnParameters());
-// 		}
-
 		FVector DropLocation = EndTrace;
 		AWieldable* ItemToPickup = Cast<AWieldable>(OtherActor);
 		//扔在其它物品上
 		if (ItemToPickup != NULL && ItemToPickup->bIsActive)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Green, TEXT("物品上"));
 			DropLocation = ItemToPickup->GetActorLocation();
 			Inventory[CurrentInventorySlot] = ItemToPickup;
 			ItemToPickup->Hide(true);
-		} else//扔在空地上
+		}
+		else//扔在空地上
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Green, TEXT("地上"));
 			DropLocation = LinetraceHit.ImpactPoint + (LinetraceHit.ImpactNormal*20.f);
 			Inventory[CurrentInventorySlot] = NULL;
 		}
@@ -247,28 +238,60 @@ void AUE4MinecraftCharacter::MoveDownInventorySlot()
 
 void AUE4MinecraftCharacter::OnHit()
 {
+	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	PlayHitAnim();
 
-	if (CurrentBlock != nullptr)
+	if (GetCurrentWieldedItem() && (int8)(GetCurrentWieldedItem()->ToolType) >= (int8)(ETool::CreateGrass))
 	{
-		bIsBreaking = true;
+		FHitResult LinetraceHit;
+		FVector StartTrace = FirstPersonCameraComponent->GetComponentLocation();
+		FVector EndTrace = StartTrace + FirstPersonCameraComponent->GetForwardVector() * Reach;
+		FCollisionQueryParams CQP;
+		CQP.AddIgnoredActor(this);
+		CQP.AddIgnoredActor(GetCurrentWieldedItem());
+		GetWorld()->LineTraceSingleByChannel(LinetraceHit, StartTrace, EndTrace, ECollisionChannel::ECC_Visibility, CQP);
 
-		float TimeBetweenBreaks = ((CurrentBlock->Resistance) / 100.f) / 2.f;
-		GetWorld()->GetTimerManager().SetTimer(BlockBreakingHandle, this, &AUE4MinecraftCharacter::BreakBlock, TimeBetweenBreaks, true);
-		GetWorld()->GetTimerManager().SetTimer(HitAnimHandle, this, &AUE4MinecraftCharacter::PlayHitAnim, 0.4f, true);
+		AActor* OtherActor = LinetraceHit.GetActor();
+		ABlock* OtherBlock = Cast<ABlock>(OtherActor);
+		if (OtherBlock != NULL)
+		{
+			GetWorld()->SpawnActor<ABlock>(GetCurrentWieldedItem()->BlockClass,
+				OtherActor->GetActorLocation() + (LinetraceHit.ImpactNormal * 100.f), FRotator(0.f, 0.f, 0.f), FActorSpawnParameters());
+		}
+	}
+	else
+	{
+		ABlock* CurrentBlock = Cast<ABlock>(CurrentHitItem);
+		if (CurrentBlock != nullptr)
+		{
+			bIsBreaking = true;
+
+			float TimeBetweenBreaks = ((CurrentBlock->Resistance) / 100.f) / 2.f;
+			GetWorld()->GetTimerManager().SetTimer(BlockBreakingHandle, this, &AUE4MinecraftCharacter::BreakBlock, TimeBetweenBreaks, true);
+			GetWorld()->GetTimerManager().SetTimer(HitAnimHandle, this, &AUE4MinecraftCharacter::PlayHitAnim, 0.4f, true);
+		}
 	}
 }
 
 void AUE4MinecraftCharacter::EndHit()
 {
-	GetWorld()->GetTimerManager().ClearTimer(BlockBreakingHandle);
-	GetWorld()->GetTimerManager().ClearTimer(HitAnimHandle);
-
-	bIsBreaking = false;
-
-	if (CurrentBlock != nullptr)
+	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
+	if (GetCurrentWieldedItem() && (int8)(GetCurrentWieldedItem()->ToolType) >= (int8)(ETool::CreateGrass))
 	{
-		CurrentBlock->ResetBlock();
+		//
+	}
+	else
+	{
+		GetWorld()->GetTimerManager().ClearTimer(BlockBreakingHandle);
+		GetWorld()->GetTimerManager().ClearTimer(HitAnimHandle);
+
+		bIsBreaking = false;
+
+		ABlock* CurrentBlock = Cast<ABlock>(CurrentHitItem);
+		if (CurrentBlock != nullptr)
+		{
+			CurrentBlock->ResetBlock();
+		}
 	}
 }
 
@@ -307,47 +330,43 @@ void AUE4MinecraftCharacter::CheckForBlock()
 	ABlock* PotentialBlock = Cast<ABlock>(LinetraceHit.GetActor());
 	AWieldable* PotentialWield = Cast<AWieldable>(LinetraceHit.GetActor());
 
+	ABlock* LastBlock = Cast<ABlock>(CurrentHitItem);
+	AWieldable* LastWield = Cast<AWieldable>(CurrentHitItem);
+
 	//还原之前高亮
-	if (CurrentBlock != nullptr)
+	if (LastBlock != nullptr)
 	{
-		CurrentBlock->SM_Block->SetRenderCustomDepth(false);
+		LastBlock->SM_Block->SetRenderCustomDepth(false);
 	}
-	if (CurrentWield != nullptr)
+	if (LastWield != nullptr)
 	{
-		CurrentWield->WieldableMesh->SetRenderCustomDepth(false);
+		LastWield->WieldableMesh->SetRenderCustomDepth(false);
 	}
 
 	//设置当前
-	if (PotentialBlock == NULL)
+	if (LinetraceHit.GetActor() == NULL)
 	{
-		CurrentBlock = nullptr;
+		CurrentHitItem = nullptr;
 	}
 	else
 	{
-		CurrentBlock = PotentialBlock;
-	}
-	if (PotentialWield == NULL)
-	{
-		CurrentWield = nullptr;
-	}
-	else
-	{
-		CurrentWield = PotentialWield;
+		CurrentHitItem = LinetraceHit.GetActor();
 	}
 
 	//启动当前高亮
-	if (CurrentBlock != nullptr)
+	if (PotentialBlock != nullptr)
 	{
-		CurrentBlock->SM_Block->SetRenderCustomDepth(true);
+		PotentialBlock->SM_Block->SetRenderCustomDepth(true);
 	}
-	if (CurrentWield != nullptr)
+	if (PotentialWield != nullptr)
 	{
-		CurrentWield->WieldableMesh->SetRenderCustomDepth(true);
+		PotentialWield->WieldableMesh->SetRenderCustomDepth(true);
 	}
 }
 
 void AUE4MinecraftCharacter::BreakBlock()
 {
+	ABlock* CurrentBlock = Cast<ABlock>(CurrentHitItem);
 	if (bIsBreaking && CurrentBlock != nullptr && !CurrentBlock->IsPendingKill())
 	{
 		CurrentBlock->Break();

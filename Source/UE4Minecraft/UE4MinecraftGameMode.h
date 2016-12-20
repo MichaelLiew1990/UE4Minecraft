@@ -6,9 +6,8 @@
 UENUM(BlueprintType)
 enum class EHUDState : uint8
 {
-	HS_InGame,
-	HS_Inventory,
-	HS_CraftMenu
+	HS_ToolBar,
+	HS_StoreHouse
 };
 
 UCLASS(minimalapi)
@@ -23,6 +22,7 @@ public:
 
 	void ApplyHUDChanges();
 
+	UFUNCTION(BlueprintCallable, Category = "HUD Functions")
 	EHUDState GetHUDState();
 
 	UFUNCTION(BlueprintCallable, Category = "HUD Functions")
@@ -34,13 +34,10 @@ protected:
 	EHUDState HUDState;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BlueprintWidgets", Meta = (BlueprintProtected = "true"))
-	TSubclassOf<class UUserWidget> InGameHUDClass;
+	TSubclassOf<class UUserWidget> ToolBarHUDClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BlueprintWidgets", Meta = (BlueprintProtected = "true"))
-	TSubclassOf<class UUserWidget> InventoryHUDClass;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BlueprintWidgets", Meta = (BlueprintProtected = "true"))
-	TSubclassOf<class UUserWidget> CraftMenuHUDClass;
+	TSubclassOf<class UUserWidget> StoreHouseHUDClass;
 
 	class UUserWidget* CurrentWidget;
 };
