@@ -28,6 +28,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "HUD Functions")
 	void ChangeHUDState(EHUDState NewState);
 
+	UFUNCTION(BlueprintPure, Category = "HUD Functions")
+	class UUserWidget* GetCurrentWidget();
+
 	bool ApplyHUD(TSubclassOf<class UUserWidget> WidgetToApply, bool ShowMouseCursor, bool EnableClickEvent);
 
 protected:

@@ -64,6 +64,11 @@ void AUE4MinecraftGameMode::ChangeHUDState(EHUDState NewState)
 	ApplyHUDChanges();
 }
 
+class UUserWidget* AUE4MinecraftGameMode::GetCurrentWidget()
+{
+	return CurrentWidget;
+}
+
 bool AUE4MinecraftGameMode::ApplyHUD(TSubclassOf<class UUserWidget> WidgetToApply, bool ShowMouseCursor, bool EnableClickEvent)
 {
 	AUE4MinecraftCharacter* MyCharacter = Cast<AUE4MinecraftCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));

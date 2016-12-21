@@ -49,11 +49,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	class UAnimMontage* FireAnimation;
 
-	UFUNCTION(BlueprintPure, Category = HUD)
+	UFUNCTION(BlueprintPure, Category = Inventory)
 	int GetCurrentInventorySlot();
+
+	UFUNCTION(BlueprintPure, Category = Inventory)
+	TArray<AWieldable*> GetInventoryList();
+
+	UFUNCTION(BlueprintPure, Category = Inventory)
+	TArray<AWieldable*> GetStoreHouseList();
+
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	bool ModifyInventory(int index, UObject* Item);
 
 	UFUNCTION(BlueprintCallable, Category = Inventory)
 	bool AddItemToInventory(AWieldable* Item);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = Inventory)
+	void OnUpdateWieldList();
 
 	UFUNCTION(BlueprintPure, Category = Inventory)
 	UTexture2D* GetThumbnailAtInventorySlot(int Slot);
@@ -80,6 +92,7 @@ protected:
 
 private:
 	const int NUM_OF_INVENTORY_SLOTS = 8;
+	const int NUM_OF_STOREHOUSE_SLOTS = 27;
 
 	int CurrentInventorySlot;
 
@@ -88,6 +101,8 @@ private:
 	AWieldable* GetCurrentWieldedItem();
 
 	void Throw();
+	void ToggleStoreHouse();
+	void QuitGame();
 
 	void MoveUpInventorySlot();
 	void MoveDownInventorySlot();
@@ -104,7 +119,6 @@ private:
 	void BreakBlock();
 
 	AActor* CurrentHitItem;
-	//AWieldable* CurrentWield;
 
 	float Reach;
 
@@ -113,6 +127,8 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TArray<AWieldable*> Inventory;
+	UPROPERTY(EditAnywhere)
+	TArray<AWieldable*> StoreHouse;
 
 public:
 	/** Returns Mesh1P subobject **/

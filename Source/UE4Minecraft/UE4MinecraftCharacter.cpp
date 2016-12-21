@@ -3,6 +3,7 @@
 #include "UE4Minecraft.h"
 #include "UE4MinecraftCharacter.h"
 #include "Animation/AnimInstance.h"
+#include "UE4MinecraftGameMode.h"
 #include "GameFramework/InputSettings.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
@@ -50,6 +51,7 @@ AUE4MinecraftCharacter::AUE4MinecraftCharacter()
 	Reach = 300.f;
 
 	Inventory.SetNum(NUM_OF_INVENTORY_SLOTS);
+	StoreHouse.SetNum(NUM_OF_STOREHOUSE_SLOTS);
 
 	// Note: The ProjectileClass and the skeletal mesh/anim blueprints for Mesh1P, FP_Gun, and VR_Gun 
 	// are set in the derived blueprint asset named MyCharacter to avoid direct content references in C++.
@@ -89,6 +91,8 @@ void AUE4MinecraftCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	PlayerInputComponent->BindAction("InventoryDown", IE_Pressed, this, &AUE4MinecraftCharacter::MoveDownInventorySlot);
 
 	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &AUE4MinecraftCharacter::Throw);
+	PlayerInputComponent->BindAction("ToggleStore", IE_Pressed, this, &AUE4MinecraftCharacter::ToggleStoreHouse);
+	PlayerInputComponent->BindAction("QuitGame", IE_Pressed, this, &AUE4MinecraftCharacter::QuitGame);
 
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AUE4MinecraftCharacter::OnHit);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AUE4MinecraftCharacter::EndHit);
@@ -105,18 +109,68 @@ int AUE4MinecraftCharacter::GetCurrentInventorySlot()
 	return CurrentInventorySlot;
 }
 
+TArray<AWieldable*> AUE4MinecraftCharacter::GetInventoryList()
+{
+	return Inventory;
+}
+
+TArray<AWieldable*> AUE4MinecraftCharacter::GetStoreHouseList()
+{
+	return StoreHouse;
+}
+
+bool AUE4MinecraftCharacter::ModifyInventory(int index, UObject* Item)
+{
+	AWieldable* Wield = Cast<AWieldable>(Item);
+	if (Wield != NULL)
+	{
+		//如果工具栏中有一样的，那么将当前的和找到的那个栏互换一下
+		int SameItemIndex = INDEX_NONE;
+		for (int i = 0; i < NUM_OF_INVENTORY_SLOTS; i++)
+		{
+			if (Inventory[i] == NULL) continue;
+			if (Inventory[i]->GetUniqueID() == Wield->GetUniqueID())
+			{
+				SameItemIndex = i;
+				break;
+			}
+		}
+		if (SameItemIndex != INDEX_NONE)
+		{
+			AWieldable* Temp = Inventory[index];
+			Inventory[index] = Wield;
+			Inventory[SameItemIndex] = Temp;
+		}
+		else
+		{
+			Inventory[index] = Wield;
+		}
+		UpdateWieldableItem();
+		return true;
+	}
+
+	return false;
+}
+
 bool AUE4MinecraftCharacter::AddItemToInventory(AWieldable * Item)
 {
 	if (Item != NULL)
 	{
-		const int32 AvailableSlot = Inventory.Find(nullptr);
+		//添加到工具栏
+		int AvailableSlot = Inventory.Find(nullptr);
 		if (AvailableSlot != INDEX_NONE)
 		{
 			Inventory[AvailableSlot] = Item;
 			CurrentInventorySlot = AvailableSlot;
-			UpdateWieldableItem();
-			return true;
 		}
+		//添加到背包
+		AvailableSlot = StoreHouse.Find(nullptr);
+		if (AvailableSlot != INDEX_NONE)
+		{
+			StoreHouse[AvailableSlot] = Item;
+		}
+		UpdateWieldableItem();
+		return true;
 	}
 	return false;
 }
@@ -150,13 +204,11 @@ void AUE4MinecraftCharacter::MoveRight(float Value)
 
 void AUE4MinecraftCharacter::MouseTurn(float v)
 {
-	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	AddControllerYawInput(v);
 }
 
 void AUE4MinecraftCharacter::MouseLookUp(float v)
 {
-	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	AddControllerPitchInput(v);
 }
 
@@ -172,6 +224,7 @@ void AUE4MinecraftCharacter::UpdateWieldableItem()
 	{
 		FP_Gun->RelativeScale3D = FVector(0.4f, 0.4f, 0.4f);
 	}
+	OnUpdateWieldList();
 }
 
 AWieldable* AUE4MinecraftCharacter::GetCurrentWieldedItem()
@@ -181,7 +234,6 @@ AWieldable* AUE4MinecraftCharacter::GetCurrentWieldedItem()
 
 void AUE4MinecraftCharacter::Throw()
 {
-	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	AWieldable* ItemToThrow = GetCurrentWieldedItem();
 	if (ItemToThrow == NULL) return;
 
@@ -198,23 +250,56 @@ void AUE4MinecraftCharacter::Throw()
 	{
 		FVector DropLocation = EndTrace;
 		AWieldable* ItemToPickup = Cast<AWieldable>(OtherActor);
+		//在背包中找到要扔的物体
+		int SameItemIndex = INDEX_NONE;
+		for (int i=0; i<NUM_OF_STOREHOUSE_SLOTS; i++)
+		{
+			if (StoreHouse[i] == NULL) continue;
+			if (StoreHouse[i]->GetUniqueID() == ItemToThrow->GetUniqueID())
+			{
+				SameItemIndex = i;
+				break;
+			}
+		}
+
 		//扔在其它物品上
 		if (ItemToPickup != NULL && ItemToPickup->bIsActive)
 		{
 			DropLocation = ItemToPickup->GetActorLocation();
 			Inventory[CurrentInventorySlot] = ItemToPickup;
+			StoreHouse[SameItemIndex] = ItemToPickup;
 			ItemToPickup->Hide(true);
 		}
 		else//扔在空地上
 		{
 			DropLocation = LinetraceHit.ImpactPoint + (LinetraceHit.ImpactNormal*20.f);
 			Inventory[CurrentInventorySlot] = NULL;
+			StoreHouse[SameItemIndex] = NULL;
 		}
 		ItemToThrow->SetActorLocationAndRotation(DropLocation, FRotator::ZeroRotator);
 		ItemToThrow->Hide(false);
 	}
 
 	UpdateWieldableItem();
+}
+
+void AUE4MinecraftCharacter::ToggleStoreHouse()
+{
+	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() == EHUDState::HS_ToolBar)
+	{
+		Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->ChangeHUDState(EHUDState::HS_StoreHouse);
+		GetWorld()->GetFirstPlayerController()->SetInputMode(FInputModeGameAndUI());
+	}
+	else
+	{
+		Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->ChangeHUDState(EHUDState::HS_ToolBar);
+		GetWorld()->GetFirstPlayerController()->SetInputMode(FInputModeGameOnly());
+	}
+}
+
+void AUE4MinecraftCharacter::QuitGame()
+{
+	UKismetSystemLibrary::QuitGame(GetWorld(), GetWorld()->GetFirstPlayerController(), EQuitPreference::Quit);
 }
 
 void AUE4MinecraftCharacter::MoveUpInventorySlot()
@@ -237,7 +322,6 @@ void AUE4MinecraftCharacter::MoveDownInventorySlot()
 
 void AUE4MinecraftCharacter::OnHit()
 {
-	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	PlayHitAnim();
 
 	if (GetCurrentWieldedItem() && (int8)(GetCurrentWieldedItem()->ToolType) >= (int8)(ETool::CreateGrass))
@@ -274,7 +358,6 @@ void AUE4MinecraftCharacter::OnHit()
 
 void AUE4MinecraftCharacter::EndHit()
 {
-	//if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() != EHUDState::HS_ToolBar) return;
 	if (GetCurrentWieldedItem() && (int8)(GetCurrentWieldedItem()->ToolType) >= (int8)(ETool::CreateGrass))
 	{
 		//

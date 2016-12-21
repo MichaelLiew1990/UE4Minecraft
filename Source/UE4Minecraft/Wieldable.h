@@ -30,7 +30,7 @@ enum class EMaterial : uint8
 	Golden = 12
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class UE4MINECRAFT_API AWieldable : public AActor
 {
 	GENERATED_BODY()
@@ -41,6 +41,15 @@ public:
 	
 	// Called every frame
 	virtual void Tick( float DeltaSeconds ) override;
+
+	UFUNCTION(BlueprintPure, Category = Inventory)
+	UTexture2D* GetThumbnail();
+
+	UFUNCTION(BlueprintPure, Category = Inventory)
+	int GetUniqueID();
+
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	void SetUniqueID(int id);
 
 	UPROPERTY(EditAnywhere)
 	ETool ToolType;
@@ -56,6 +65,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	UTexture2D* PickupThumbnail;
+
+	UPROPERTY(EditAnywhere)
+	int UniqueID;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block")
 	TSubclassOf<class ABlock> BlockClass;

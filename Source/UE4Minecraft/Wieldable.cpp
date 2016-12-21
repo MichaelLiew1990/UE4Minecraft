@@ -3,7 +3,7 @@
 #include "UE4Minecraft.h"
 #include "UE4MinecraftCharacter.h"
 
-
+static int WieldUniqueID = 0;
 // Sets default values
 AWieldable::AWieldable()
 {
@@ -25,6 +25,9 @@ AWieldable::AWieldable()
 	ToolType = ETool::Unarmed;
 
 	bIsActive = true;
+
+	WieldUniqueID += 1;
+	UniqueID = WieldUniqueID;
 }
 
 // Called every frame
@@ -35,6 +38,21 @@ void AWieldable::Tick(float DeltaTime)
 	FRotator rotation = WieldableMesh->GetComponentRotation();
 	rotation.Yaw += 1.f;
 	WieldableMesh->SetRelativeRotation(rotation);
+}
+
+UTexture2D* AWieldable::GetThumbnail()
+{
+	return PickupThumbnail;
+}
+
+int AWieldable::GetUniqueID()
+{
+	return UniqueID;
+}
+
+void AWieldable::SetUniqueID(int id)
+{
+	UniqueID = id;
 }
 
 void AWieldable::OnRadiusEnter(class UPrimitiveComponent* OverlappedComponent, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
