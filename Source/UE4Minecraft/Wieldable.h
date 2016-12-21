@@ -13,10 +13,15 @@ enum class ETool : uint8
 	Axe,
 	Shovel,
 	Sword,
-	CreateGrass,
+	CreateGrass,//·½¿é
 	CreateGlass,
 	CreateGravel,
-	CreateSoil
+	CreateSoil,
+	CreatePinkFlower,//Ö²Îï
+	CreateOrangeFlower,
+	CreateSmallGrass,
+	CreateTallGrass,
+	CreateWheat
 };
 
 UENUM(BlueprintType)

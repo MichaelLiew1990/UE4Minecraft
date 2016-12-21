@@ -161,7 +161,7 @@ bool AUE4MinecraftCharacter::AddItemToInventory(AWieldable * Item)
 		if (AvailableSlot != INDEX_NONE)
 		{
 			Inventory[AvailableSlot] = Item;
-			CurrentInventorySlot = AvailableSlot;
+			//CurrentInventorySlot = AvailableSlot;
 		}
 		//Ìí¼Óµ½±³°ü
 		AvailableSlot = StoreHouse.Find(nullptr);
@@ -218,11 +218,21 @@ void AUE4MinecraftCharacter::UpdateWieldableItem()
 		FP_Gun->SetStaticMesh(Inventory[CurrentInventorySlot]->WieldableMesh->StaticMesh) : FP_Gun->SetStaticMesh(ArmMesh);
 	if (Inventory[CurrentInventorySlot] && (int8)(Inventory[CurrentInventorySlot]->ToolType) >= (int8)(ETool::CreateGrass))
 	{
-		FP_Gun->RelativeScale3D = FVector(0.1f, 0.1f, 0.1f);
+		if ((int8)(Inventory[CurrentInventorySlot]->ToolType) >= (int8)(ETool::CreatePinkFlower))
+		{
+			FP_Gun->RelativeScale3D = FVector(0.3f, 0.3f, 0.3f);
+			FP_Gun->RelativeRotation = FRotator(150.f, 90.f, 180.f);
+		}
+		else
+		{
+			FP_Gun->RelativeScale3D = FVector(0.1f, 0.1f, 0.1f);
+			FP_Gun->RelativeRotation = FRotator(150.f, 90.f, 90.f);
+		}
 	}
 	else
 	{
 		FP_Gun->RelativeScale3D = FVector(0.4f, 0.4f, 0.4f);
+		FP_Gun->RelativeRotation = FRotator(150.f, 90.f, 90.f);
 	}
 	OnUpdateWieldList();
 }
@@ -349,7 +359,8 @@ void AUE4MinecraftCharacter::OnHit()
 		{
 			bIsBreaking = true;
 
-			float TimeBetweenBreaks = ((CurrentBlock->Resistance) / 100.f) / 2.f;
+			float Demage = GetCurrentWieldedItem() == NULL ? 1.f : (float)(GetCurrentWieldedItem()->MaterialType);
+			float TimeBetweenBreaks = ((CurrentBlock->Resistance) / 100.f) / Demage;
 			GetWorld()->GetTimerManager().SetTimer(BlockBreakingHandle, this, &AUE4MinecraftCharacter::BreakBlock, TimeBetweenBreaks, true);
 			GetWorld()->GetTimerManager().SetTimer(HitAnimHandle, this, &AUE4MinecraftCharacter::PlayHitAnim, 0.4f, true);
 		}
@@ -358,12 +369,12 @@ void AUE4MinecraftCharacter::OnHit()
 
 void AUE4MinecraftCharacter::EndHit()
 {
-	if (GetCurrentWieldedItem() && (int8)(GetCurrentWieldedItem()->ToolType) >= (int8)(ETool::CreateGrass))
-	{
-		//
-	}
-	else
-	{
+// 	if (GetCurrentWieldedItem() && (int8)(GetCurrentWieldedItem()->ToolType) >= (int8)(ETool::CreateGrass))
+// 	{
+// 		//
+// 	}
+// 	else
+// 	{
 		GetWorld()->GetTimerManager().ClearTimer(BlockBreakingHandle);
 		GetWorld()->GetTimerManager().ClearTimer(HitAnimHandle);
 
@@ -374,7 +385,7 @@ void AUE4MinecraftCharacter::EndHit()
 		{
 			CurrentBlock->ResetBlock();
 		}
-	}
+/*	}*/
 }
 
 void AUE4MinecraftCharacter::PlayHitAnim()
