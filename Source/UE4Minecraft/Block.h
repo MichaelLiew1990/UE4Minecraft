@@ -5,32 +5,49 @@
 #include "GameFramework/Actor.h"
 #include "Block.generated.h"
 
+UENUM(BlueprintType)
+enum class BlockType : uint8
+{
+	Grass,//方块
+	Glass,
+	Gravel,
+	Soil,
+	PinkFlower,//植物
+	OrangeFlower,
+	SmallGrass,
+	TallGrass,
+	Wheat
+};
+
 UCLASS()
 class UE4MINECRAFT_API ABlock : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	ABlock();
 
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = Setup)
 	UStaticMeshComponent* SM_Block;
-	
-	uint8 MinimumMaterial;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = Setup)
+	BlockType Type;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Setup)
+	class USoundBase* BreakSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Setup)
+	class USoundBase* DestroySound;
+
+	UPROPERTY(EditDefaultsOnly, Category = Setup)
 	float Resistance;
 
-	UPROPERTY(BlueprintReadWrite)
-	float BreakingStage;
+	//返回是否摧毁
+	bool Break(float Demage, class UParticleSystem* Particle, FVector ParticleLocation, class UParticleSystem* ParticleBoom);
 
-	void Break();
+	void OnBroken(class UParticleSystem* ParticleBoom);
 
-	void ResetBlock();
-
-	void OnBroken(bool HasRequiredPickaxe);
+	float CurrentLife;
 };

@@ -4,51 +4,52 @@
 #include "Block.h"
 
 
-// Sets default values
 ABlock::ABlock()
 {
 	SM_Block = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BlockMesh"));
 
 	Resistance = 20.f;
-	BreakingStage = 0.f;
-	MinimumMaterial = 0;
 }
 
-// Called when the game starts or when spawned
 void ABlock::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	CurrentLife = Resistance;
 }
 
-void ABlock::Break()
+bool ABlock::Break(float Demage, class UParticleSystem* Particle, FVector ParticleLocation, class UParticleSystem* ParticleBoom)
 {
-	++BreakingStage;
-	float CrackingValue = 1.f - (BreakingStage / 5.f);
+	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Break-" + GetName()));
+
+	CurrentLife -= Demage;
+
+	if (BreakSound != NULL)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, BreakSound, GetActorLocation());
+	}
+
+	if (Particle != NULL)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(this, Particle, ParticleLocation);
+	}
 
 	UMaterialInstanceDynamic* MatInstance = SM_Block->CreateDynamicMaterialInstance(0);
 	if (MatInstance != nullptr)
 	{
-		MatInstance->SetScalarParameterValue(FName("CrackingValue"), CrackingValue);
+		MatInstance->SetScalarParameterValue(FName("CrackingValue"), (CurrentLife>0.f ? CurrentLife : 0.f) / Resistance);
 	}
 
-	if (BreakingStage == 5.f)
+	if (CurrentLife <= 0.f)
 	{
-		OnBroken(true);
+		OnBroken(ParticleBoom);
+		return true;
 	}
+
+	return false;
 }
 
-void ABlock::ResetBlock()
+void ABlock::OnBroken(class UParticleSystem* ParticleBoom)
 {
-	BreakingStage = 0.f;
-	UMaterialInstanceDynamic* MatInstance = SM_Block->CreateDynamicMaterialInstance(0);
-	if (MatInstance != nullptr)
-	{
-		MatInstance->SetScalarParameterValue(FName("CrackingValue"), 1.f);
-	}
-}
-
-void ABlock::OnBroken(bool HasRequiredPickaxe)
-{
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleBoom, GetActorLocation());
 	Destroy();
 }

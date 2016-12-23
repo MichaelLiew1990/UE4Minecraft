@@ -31,8 +31,8 @@ enum class EMaterial : uint8
 	Wooden = 2,
 	Stone = 4,
 	Iron = 6,
-	Diamond = 8,
-	Golden = 12
+	Golden = 8,
+	Diamond = 12
 };
 
 UCLASS(BlueprintType)

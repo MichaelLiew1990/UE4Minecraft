@@ -49,6 +49,7 @@ AUE4MinecraftCharacter::AUE4MinecraftCharacter()
 	FP_Gun->SetupAttachment(RootComponent);
 
 	Reach = 300.f;
+	IsEnableVR = false;
 
 	Inventory.SetNum(NUM_OF_INVENTORY_SLOTS);
 	StoreHouse.SetNum(NUM_OF_STOREHOUSE_SLOTS);
@@ -262,7 +263,7 @@ void AUE4MinecraftCharacter::Throw()
 		AWieldable* ItemToPickup = Cast<AWieldable>(OtherActor);
 		//在背包中找到要扔的物体
 		int SameItemIndex = INDEX_NONE;
-		for (int i=0; i<NUM_OF_STOREHOUSE_SLOTS; i++)
+		for (int i = 0; i < NUM_OF_STOREHOUSE_SLOTS; i++)
 		{
 			if (StoreHouse[i] == NULL) continue;
 			if (StoreHouse[i]->GetUniqueID() == ItemToThrow->GetUniqueID())
@@ -295,6 +296,7 @@ void AUE4MinecraftCharacter::Throw()
 
 void AUE4MinecraftCharacter::ToggleStoreHouse()
 {
+	if (IsEnableVR) return;
 	if (Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->GetHUDState() == EHUDState::HS_ToolBar)
 	{
 		Cast<AUE4MinecraftGameMode>(GetWorld()->GetAuthGameMode())->ChangeHUDState(EHUDState::HS_StoreHouse);
@@ -358,48 +360,25 @@ void AUE4MinecraftCharacter::OnHit()
 		if (CurrentBlock != nullptr)
 		{
 			bIsBreaking = true;
-
-			float Demage = GetCurrentWieldedItem() == NULL ? 1.f : (float)(GetCurrentWieldedItem()->MaterialType);
-			float TimeBetweenBreaks = ((CurrentBlock->Resistance) / 100.f) / Demage;
-			GetWorld()->GetTimerManager().SetTimer(BlockBreakingHandle, this, &AUE4MinecraftCharacter::BreakBlock, TimeBetweenBreaks, true);
-			GetWorld()->GetTimerManager().SetTimer(HitAnimHandle, this, &AUE4MinecraftCharacter::PlayHitAnim, 0.4f, true);
+			BreakBlock();//第一次破坏
+			GetWorld()->GetTimerManager().SetTimer(BlockBreakingHandle, this, &AUE4MinecraftCharacter::BreakBlock, 0.3f, true);
+			GetWorld()->GetTimerManager().SetTimer(HitAnimHandle, this, &AUE4MinecraftCharacter::PlayHitAnim, 0.3f, true);
 		}
 	}
 }
 
 void AUE4MinecraftCharacter::EndHit()
 {
-// 	if (GetCurrentWieldedItem() && (int8)(GetCurrentWieldedItem()->ToolType) >= (int8)(ETool::CreateGrass))
-// 	{
-// 		//
-// 	}
-// 	else
-// 	{
-		GetWorld()->GetTimerManager().ClearTimer(BlockBreakingHandle);
-		GetWorld()->GetTimerManager().ClearTimer(HitAnimHandle);
+	GetWorld()->GetTimerManager().ClearTimer(BlockBreakingHandle);
+	GetWorld()->GetTimerManager().ClearTimer(HitAnimHandle);
 
-		bIsBreaking = false;
-
-		ABlock* CurrentBlock = Cast<ABlock>(CurrentHitItem);
-		if (CurrentBlock != nullptr)
-		{
-			CurrentBlock->ResetBlock();
-		}
-/*	}*/
+	bIsBreaking = false;
 }
 
 void AUE4MinecraftCharacter::PlayHitAnim()
 {
-	// try and play the sound if specified
-	if (FireSound != NULL)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
-	}
-
-	// try and play a firing animation if specified
 	if (FireAnimation != NULL)
 	{
-		// Get the animation object for the arms mesh
 		UAnimInstance* AnimInstance = Mesh1P->GetAnimInstance();
 		if (AnimInstance != NULL)
 		{
@@ -444,6 +423,7 @@ void AUE4MinecraftCharacter::CheckForBlock()
 	else
 	{
 		CurrentHitItem = LinetraceHit.GetActor();
+		CurrentHitPoint = LinetraceHit.ImpactPoint;
 	}
 
 	//启动当前高亮
@@ -462,6 +442,32 @@ void AUE4MinecraftCharacter::BreakBlock()
 	ABlock* CurrentBlock = Cast<ABlock>(CurrentHitItem);
 	if (bIsBreaking && CurrentBlock != nullptr && !CurrentBlock->IsPendingKill())
 	{
-		CurrentBlock->Break();
+		float Demage = GetCurrentWieldedItem() == NULL ? 1.f : (float)(GetCurrentWieldedItem()->MaterialType);
+		UParticleSystem* Particle = NULL;
+		UParticleSystem* ParticleBoom = NULL;
+		if (CurrentBlock->Type == BlockType::Grass || CurrentBlock->Type == BlockType::Soil)
+		{
+			Particle = SoilParticle;
+			ParticleBoom = SoilBoomParticle;
+		}
+		else if (CurrentBlock->Type == BlockType::Glass)
+		{
+			Particle = GlassParticle;
+			ParticleBoom = GlassBoomParticle;
+		}
+		else if (CurrentBlock->Type == BlockType::Gravel)
+		{
+			Particle = GravelParticle;
+			ParticleBoom = GravelBoomParticle;
+		}
+		else
+		{
+			Particle = GrassParticle;
+			ParticleBoom = GrassBoomParticle;
+		}
+		if (CurrentBlock->Break(Demage, Particle, CurrentHitPoint, ParticleBoom))
+		{
+			EndHit();
+		}
 	}
 }

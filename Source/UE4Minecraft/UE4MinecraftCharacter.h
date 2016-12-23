@@ -33,6 +33,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = Mesh)
 	class UStaticMesh* ArmMesh;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VR)
+	bool IsEnableVR;
+
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseTurnRate;
@@ -41,9 +44,29 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
 
-	/** Sound to play each time we fire */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
-	class USoundBase* FireSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Emitter)
+	class UParticleSystem* SoilParticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Emitter)
+	class UParticleSystem* SoilBoomParticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Emitter)
+	class UParticleSystem* GlassParticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Emitter)
+	class UParticleSystem* GlassBoomParticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Emitter)
+	class UParticleSystem* GrassParticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Emitter)
+	class UParticleSystem* GrassBoomParticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Emitter)
+	class UParticleSystem* GravelParticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Emitter)
+	class UParticleSystem* GravelBoomParticle;
 
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
@@ -119,6 +142,7 @@ private:
 	void BreakBlock();
 
 	AActor* CurrentHitItem;
+	FVector CurrentHitPoint;
 
 	float Reach;
 
